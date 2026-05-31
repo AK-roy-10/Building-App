@@ -1,0 +1,850 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>AgentDesk — Frontend</title>
+  <style>
+    :root {
+      --bg: #0b1020;
+      --panel: #141a30;
+      --panel-2: #1c2444;
+      --text: #e7ecf3;
+      --muted: #9aa3b2;
+      --accent: #6ea8ff;
+      --accent-2: #4ad6c0;
+      --danger: #ff6b6b;
+      --ok: #4ad66d;
+      --border: #2a3257;
+    }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; background: var(--bg); color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    a { color: var(--accent); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 14px 24px; background: var(--panel); border-bottom: 1px solid var(--border);
+      position: sticky; top: 0; z-index: 10;
+    }
+    header .brand { font-weight: 700; font-size: 18px; letter-spacing: .3px; }
+    header .brand span { color: var(--accent); }
+    nav { display: flex; gap: 6px; flex-wrap: wrap; }
+    nav button {
+      background: transparent; color: var(--text); border: 1px solid transparent;
+      padding: 8px 12px; border-radius: 8px; cursor: pointer; font-size: 14px;
+    }
+    nav button:hover { background: var(--panel-2); }
+    nav button.active { background: var(--panel-2); border-color: var(--border); color: var(--accent); }
+    .user-pill { color: var(--muted); font-size: 13px; margin-right: 8px; }
+    main { max-width: 1100px; margin: 0 auto; padding: 24px; }
+    .card { background: var(--panel); border: 1px solid var(--border); border-radius: 12px;
+      padding: 20px; margin-bottom: 20px; }
+    .card h2 { margin: 0 0 12px; font-size: 18px; }
+    .card p.muted { color: var(--muted); margin: 0 0 12px; font-size: 14px; }
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+    @media (max-width: 720px) { .grid-2 { grid-template-columns: 1fr; } }
+    label { display: block; font-size: 13px; color: var(--muted); margin-bottom: 4px; }
+    input, select, textarea {
+      width: 100%; background: var(--panel-2); color: var(--text); border: 1px solid var(--border);
+      border-radius: 8px; padding: 10px 12px; font-size: 14px; font-family: inherit;
+    }
+    input:focus, select:focus, textarea:focus { outline: none; border-color: var(--accent); }
+    .field { margin-bottom: 12px; }
+    .row { display: flex; gap: 10px; align-items: center; }
+    .row > * { flex: 1; }
+    button.primary {
+      background: var(--accent); color: #0b1020; border: none; border-radius: 8px;
+      padding: 10px 14px; font-weight: 600; cursor: pointer; font-size: 14px;
+    }
+    button.primary:hover { filter: brightness(1.05); }
+    button.ghost {
+      background: transparent; color: var(--text); border: 1px solid var(--border);
+      border-radius: 8px; padding: 8px 12px; cursor: pointer; font-size: 13px;
+    }
+    button.ghost:hover { background: var(--panel-2); }
+    button.danger { background: var(--danger); color: #fff; border: none; border-radius: 8px;
+      padding: 8px 12px; cursor: pointer; font-size: 13px; }
+    table { width: 100%; border-collapse: collapse; font-size: 14px; }
+    th, td { text-align: left; padding: 10px 8px; border-bottom: 1px solid var(--border); }
+    th { color: var(--muted); font-weight: 500; font-size: 12px; text-transform: uppercase; letter-spacing: .5px; }
+    .badge { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 12px;
+      background: var(--panel-2); border: 1px solid var(--border); color: var(--muted); }
+    .badge.ok { color: var(--ok); border-color: var(--ok); }
+    .badge.warn { color: #ffcb6b; border-color: #ffcb6b; }
+    .toast {
+      position: fixed; right: 20px; bottom: 20px; background: var(--panel-2);
+      border: 1px solid var(--border); padding: 12px 16px; border-radius: 10px;
+      max-width: 360px; font-size: 14px; box-shadow: 0 10px 30px rgba(0,0,0,.3);
+      opacity: 0; transform: translateY(10px); transition: all .2s ease;
+    }
+    .toast.show { opacity: 1; transform: translateY(0); }
+    .toast.ok { border-color: var(--ok); }
+    .toast.err { border-color: var(--danger); }
+    .hide { display: none !important; }
+    .kv { display: grid; grid-template-columns: 140px 1fr; gap: 8px 16px; font-size: 14px; }
+    .kv div:nth-child(odd) { color: var(--muted); }
+    pre { background: var(--panel-2); border: 1px solid var(--border); border-radius: 8px;
+      padding: 12px; overflow-x: auto; font-size: 12px; color: #cfd8e3; }
+    .checkbox-row { display: flex; align-items: center; gap: 8px; font-size: 14px; color: var(--muted); }
+    .checkbox-row input { width: auto; }
+    .auth-wrap { max-width: 460px; margin: 60px auto; }
+    .auth-tabs { display: flex; gap: 6px; margin-bottom: 16px; }
+    .auth-tabs button {
+      flex: 1; background: var(--panel-2); color: var(--text); border: 1px solid var(--border);
+      padding: 10px; border-radius: 8px; cursor: pointer;
+    }
+    .auth-tabs button.active { background: var(--accent); color: #0b1020; border-color: var(--accent); }
+    footer { text-align: center; color: var(--muted); font-size: 12px; padding: 30px 16px; }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="brand">Agent<span>Desk</span> · Frontend</div>
+    <nav id="nav" class="hide">
+      <button data-view="dashboard">Dashboard</button>
+      <button data-view="agents">Agents</button>
+      <button data-view="brokers">Brokers</button>
+      <button data-view="plans">Plans</button>
+      <button data-view="models">LLM Models</button>
+      <span class="user-pill" id="user-pill"></span>
+      <button id="logout-btn" class="ghost">Logout</button>
+    </nav>
+  </header>
+
+  <main>
+    <!-- AUTH VIEW -->
+    <section id="view-auth" class="auth-wrap">
+      <div class="card">
+        <h2>Welcome</h2>
+        <p class="muted">Sign in or create an organization to use AgentDesk.</p>
+
+        <div class="auth-tabs">
+          <button id="tab-login" class="active">Login</button>
+          <button id="tab-signup">Sign up</button>
+        </div>
+
+        <!-- LOGIN -->
+        <form id="form-login">
+          <div class="field">
+            <label for="login-email">Email</label>
+            <input id="login-email" type="email" required autocomplete="username" />
+          </div>
+          <div class="field">
+            <label for="login-password">Password</label>
+            <input id="login-password" type="password" required autocomplete="current-password" />
+          </div>
+          <button type="submit" class="primary">Login</button>
+        </form>
+
+        <!-- SIGNUP -->
+        <form id="form-signup" class="hide">
+          <div class="field">
+            <label for="signup-org">Organization name</label>
+            <input id="signup-org" type="text" required minlength="2" />
+          </div>
+          <div class="field">
+            <label for="signup-email">Email</label>
+            <input id="signup-email" type="email" required autocomplete="username" />
+          </div>
+          <div class="field">
+            <label for="signup-password">Password (min 8 chars)</label>
+            <input id="signup-password" type="password" required minlength="8" autocomplete="new-password" />
+          </div>
+          <div class="field checkbox-row">
+            <input id="signup-risk" type="checkbox" required />
+            <label for="signup-risk" style="margin:0">I accept the risk disclaimer (not financial advice).</label>
+          </div>
+          <button type="submit" class="primary">Create account</button>
+        </form>
+      </div>
+      <div class="card">
+        <h2>Backend health</h2>
+        <p class="muted">Live check against <code>/api/health</code>.</p>
+        <div class="row">
+          <button class="ghost" id="health-btn">Ping</button>
+          <span id="health-out" class="badge">unknown</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- DASHBOARD -->
+    <section id="view-dashboard" class="hide">
+      <div class="card">
+        <h2>Account</h2>
+        <div id="me-kv" class="kv"></div>
+      </div>
+      <div class="grid-2">
+        <div class="card">
+          <h2>Agents</h2>
+          <div id="dash-agents-count" class="muted">…</div>
+        </div>
+        <div class="card">
+          <h2>Broker connections</h2>
+          <div id="dash-brokers-count" class="muted">…</div>
+        </div>
+      </div>
+      <div class="card">
+        <h2>Backend health</h2>
+        <div class="row">
+          <button class="ghost" id="health-btn-2">Ping</button>
+          <span id="health-out-2" class="badge">unknown</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- AGENTS -->
+    <section id="view-agents" class="hide">
+      <div class="card">
+        <h2>Your agents</h2>
+        <p class="muted">Agents are created via the JSON API. Use the form below to create a simple one.</p>
+        <table>
+          <thead><tr><th>Name</th><th>Strategy</th><th>Automation</th><th>Status</th><th></th></tr></thead>
+          <tbody id="agents-tbody"><tr><td colspan="5" class="muted">Loading…</td></tr></tbody>
+        </table>
+      </div>
+
+      <div class="card">
+        <h2>Create agent</h2>
+        <form id="form-agent">
+          <div class="grid-2">
+            <div class="field">
+              <label>Name</label>
+              <input id="ag-name" type="text" required placeholder="My momentum agent" />
+            </div>
+            <div class="field">
+              <label>Strategy</label>
+              <select id="ag-strategy"></select>
+            </div>
+            <div class="field">
+              <label>Automation</label>
+              <select id="ag-automation">
+                <option value="suggest">suggest</option>
+                <option value="paper">paper</option>
+                <option value="live_manual">live_manual</option>
+                <option value="live_auto">live_auto</option>
+              </select>
+            </div>
+            <div class="field">
+              <label>Model</label>
+              <select id="ag-model">
+                <option value="mock">mock</option>
+              </select>
+            </div>
+            <div class="field">
+              <label>LLM provider</label>
+              <select id="ag-llm-provider"><option value="">(auto)</option></select>
+            </div>
+            <div class="field">
+              <label>Asset class</label>
+              <select id="ag-asset-class"></select>
+            </div>
+            <div class="field">
+              <label>Timeframe</label>
+              <select id="ag-timeframe"></select>
+            </div>
+            <div class="field">
+              <label>Data provider</label>
+              <select id="ag-data-provider"></select>
+            </div>
+            <div class="field">
+              <label>Broker connection (optional)</label>
+              <select id="ag-broker"><option value="">— none —</option></select>
+            </div>
+            <div class="field">
+              <label>Allowed symbols (comma-separated)</label>
+              <input id="ag-symbols" type="text" placeholder="AAPL,MSFT" />
+            </div>
+          </div>
+          <div class="field">
+            <label>Strategy config (JSON)</label>
+            <textarea id="ag-config" rows="6">{}</textarea>
+          </div>
+          <button type="submit" class="primary">Create agent</button>
+        </form>
+      </div>
+    </section>
+
+    <!-- BROKERS -->
+    <section id="view-brokers" class="hide">
+      <div class="card">
+        <h2>Broker connections</h2>
+        <table>
+          <thead><tr><th>Label</th><th>Broker</th><th>Scope</th><th>Cash</th><th></th></tr></thead>
+          <tbody id="brokers-tbody"><tr><td colspan="5" class="muted">Loading…</td></tr></tbody>
+        </table>
+      </div>
+      <div class="card">
+        <h2>Add connection</h2>
+        <form id="form-broker">
+          <div class="grid-2">
+            <div class="field">
+              <label>Broker</label>
+              <select id="br-broker">
+                <option value="paper">paper</option>
+                <option value="alpaca">alpaca</option>
+              </select>
+            </div>
+            <div class="field">
+              <label>Label</label>
+              <input id="br-label" type="text" required placeholder="My paper account" />
+            </div>
+            <div class="field">
+              <label>Trade scope</label>
+              <select id="br-scope">
+                <option value="paper">paper</option>
+                <option value="live">live</option>
+              </select>
+            </div>
+            <div class="field">
+              <label>API key (optional)</label>
+              <input id="br-key" type="text" />
+            </div>
+            <div class="field">
+              <label>API secret (optional)</label>
+              <input id="br-secret" type="password" />
+            </div>
+          </div>
+          <button type="submit" class="primary">Add</button>
+        </form>
+      </div>
+    </section>
+
+    <!-- PLANS -->
+    <section id="view-plans" class="hide">
+      <div class="card">
+        <h2>Available plans</h2>
+        <table>
+          <thead><tr><th>Plan</th><th>Price</th><th>Entitlements</th><th></th></tr></thead>
+          <tbody id="plans-tbody"><tr><td colspan="4" class="muted">Loading…</td></tr></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- LLM MODELS -->
+    <section id="view-models" class="hide">
+      <div class="card">
+        <h2>LLM model catalog</h2>
+        <div class="field" style="max-width:480px">
+          <label>Filter by tag</label>
+          <select id="llm-tag-filter">
+            <option value="">(all)</option>
+            <option value="finance" selected>finance</option>
+            <option value="general">general</option>
+            <option value="open">open</option>
+            <option value="self-hosted">self-hosted</option>
+            <option value="cheap">cheap</option>
+            <option value="long-context">long-context</option>
+          </select>
+        </div>
+        <table>
+          <thead><tr><th>Model</th><th>Provider</th><th>Tags</th><th>Context</th><th>$/1k in</th><th>License</th><th>Available</th></tr></thead>
+          <tbody id="models-tbody"><tr><td colspan="7" class="muted">Loading…</td></tr></tbody>
+        </table>
+        <p class="muted small">Models marked "plan locked" require a plan upgrade. Self-hosted / Ollama models cost $0 once running.</p>
+      </div>
+    </section>
+  </main>
+
+  <div id="toast" class="toast"></div>
+
+  <footer>
+    AgentDesk MVP · <a href="/docs">API docs</a> · <a href="/dashboard">Legacy server-rendered UI</a>
+  </footer>
+
+  <script>
+  (function () {
+    "use strict";
+
+    // ---------- API helper ----------
+    // Same-origin: the FastAPI backend sets an httpOnly `access_token` cookie on login/signup,
+    // so all subsequent requests are authenticated automatically.
+    async function api(path, opts) {
+      opts = opts || {};
+      const init = {
+        method: opts.method || "GET",
+        credentials: "include",
+        headers: { "Accept": "application/json" },
+      };
+      if (opts.body !== undefined) {
+        init.headers["Content-Type"] = "application/json";
+        init.body = JSON.stringify(opts.body);
+      }
+      const res = await fetch(path, init);
+      const ct = res.headers.get("content-type") || "";
+      const data = ct.includes("application/json") ? await res.json().catch(() => null) : await res.text();
+      if (!res.ok) {
+        const msg = (data && data.detail) || (typeof data === "string" ? data : "Request failed") || res.statusText;
+        const err = new Error(typeof msg === "string" ? msg : JSON.stringify(msg));
+        err.status = res.status;
+        err.data = data;
+        throw err;
+      }
+      return data;
+    }
+
+    // ---------- Toast ----------
+    const toast = document.getElementById("toast");
+    let toastTimer = null;
+    function showToast(message, kind) {
+      toast.textContent = message;
+      toast.className = "toast show " + (kind || "");
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => { toast.className = "toast"; }, 3500);
+    }
+
+    // ---------- View routing ----------
+    const VIEWS = ["auth", "dashboard", "agents", "brokers", "plans"];
+    function showView(name) {
+      VIEWS.forEach(v => {
+        const el = document.getElementById("view-" + v);
+        if (el) el.classList.toggle("hide", v !== name);
+      });
+      document.querySelectorAll("#nav button[data-view]").forEach(b => {
+        b.classList.toggle("active", b.dataset.view === name);
+      });
+    }
+
+    document.querySelectorAll("#nav button[data-view]").forEach(b => {
+      b.addEventListener("click", () => {
+        const v = b.dataset.view;
+        showView(v);
+        if (v === "dashboard") loadDashboard();
+        if (v === "agents") loadAgents();
+        if (v === "brokers") loadBrokers();
+        if (v === "plans") loadPlans();
+        if (v === "models") loadModels();
+      });
+    });
+
+    // ---------- Auth tabs ----------
+    const tabLogin = document.getElementById("tab-login");
+    const tabSignup = document.getElementById("tab-signup");
+    const formLogin = document.getElementById("form-login");
+    const formSignup = document.getElementById("form-signup");
+
+    tabLogin.addEventListener("click", () => {
+      tabLogin.classList.add("active"); tabSignup.classList.remove("active");
+      formLogin.classList.remove("hide"); formSignup.classList.add("hide");
+    });
+    tabSignup.addEventListener("click", () => {
+      tabSignup.classList.add("active"); tabLogin.classList.remove("active");
+      formSignup.classList.remove("hide"); formLogin.classList.add("hide");
+    });
+
+    // ---------- Auth actions ----------
+    formLogin.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      try {
+        await api("/api/auth/login", {
+          method: "POST",
+          body: {
+            email: document.getElementById("login-email").value.trim(),
+            password: document.getElementById("login-password").value,
+          },
+        });
+        showToast("Logged in", "ok");
+        await afterLogin();
+      } catch (err) { showToast(err.message, "err"); }
+    });
+
+    formSignup.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      try {
+        await api("/api/auth/signup", {
+          method: "POST",
+          body: {
+            org_name: document.getElementById("signup-org").value.trim(),
+            email: document.getElementById("signup-email").value.trim(),
+            password: document.getElementById("signup-password").value,
+            accept_risk_disclaimer: document.getElementById("signup-risk").checked,
+          },
+        });
+        showToast("Account created", "ok");
+        await afterLogin();
+      } catch (err) { showToast(err.message, "err"); }
+    });
+
+    document.getElementById("logout-btn").addEventListener("click", async () => {
+      try { await api("/api/auth/logout", { method: "POST" }); } catch (_) {}
+      enterLoggedOut();
+      showToast("Logged out", "ok");
+    });
+
+    // ---------- Health ----------
+    async function pingHealth(outId) {
+      const el = document.getElementById(outId);
+      el.textContent = "checking…";
+      el.className = "badge";
+      try {
+        const r = await api("/api/health");
+        el.textContent = r && r.ok ? "ok" : "down";
+        el.className = "badge " + (r && r.ok ? "ok" : "warn");
+      } catch (err) {
+        el.textContent = "down";
+        el.className = "badge warn";
+      }
+    }
+    document.getElementById("health-btn").addEventListener("click", () => pingHealth("health-out"));
+    document.getElementById("health-btn-2").addEventListener("click", () => pingHealth("health-out-2"));
+
+    // ---------- Logged-in flow ----------
+    let CURRENT_USER = null;
+
+    async function afterLogin() {
+      try {
+        const me = await api("/api/me");
+        CURRENT_USER = me;
+        enterLoggedIn(me);
+      } catch (err) {
+        enterLoggedOut();
+        if (err.status !== 401) showToast(err.message, "err");
+      }
+    }
+
+    function enterLoggedIn(me) {
+      document.getElementById("nav").classList.remove("hide");
+      document.getElementById("user-pill").textContent =
+        (me.user && me.user.email ? me.user.email : "") +
+        (me.plan ? " · " + me.plan : "");
+      showView("dashboard");
+      loadDashboard();
+    }
+
+    function enterLoggedOut() {
+      CURRENT_USER = null;
+      document.getElementById("nav").classList.add("hide");
+      document.getElementById("user-pill").textContent = "";
+      showView("auth");
+    }
+
+    // ---------- Dashboard ----------
+    async function loadDashboard() {
+      const kv = document.getElementById("me-kv");
+      kv.innerHTML = "";
+      try {
+        const me = await api("/api/me");
+        const rows = [
+          ["Email", me.user && me.user.email],
+          ["Role", me.user && me.user.role],
+          ["Organization", me.org && (me.org.name || me.org.id)],
+          ["Plan", me.plan],
+          ["Kill switch", me.org && me.org.kill_switch ? "ON" : "off"],
+        ];
+        rows.forEach(([k, v]) => {
+          const a = document.createElement("div"); a.textContent = k;
+          const b = document.createElement("div"); b.textContent = v == null ? "—" : String(v);
+          kv.appendChild(a); kv.appendChild(b);
+        });
+
+        const agents = await api("/api/agents").catch(() => []);
+        document.getElementById("dash-agents-count").textContent =
+          agents.length + " agent" + (agents.length === 1 ? "" : "s");
+
+        const brokers = await api("/api/broker-connections").catch(() => []);
+        document.getElementById("dash-brokers-count").textContent =
+          brokers.length + " connection" + (brokers.length === 1 ? "" : "s");
+      } catch (err) {
+        if (err.status === 401) { enterLoggedOut(); return; }
+        showToast(err.message, "err");
+      }
+    }
+
+    // ---------- Agents ----------
+    async function loadAgents() {
+      const tbody = document.getElementById("agents-tbody");
+      tbody.innerHTML = "<tr><td colspan=\"5\" class=\"muted\">Loading…</td></tr>";
+      try {
+        const [agents, strategies, brokers, assetClasses, timeframes, dataProviders, llmProviders, llmModels] = await Promise.all([
+          api("/api/agents"),
+          api("/api/agents/strategies"),
+          api("/api/broker-connections").catch(() => []),
+          api("/api/asset-classes").catch(() => []),
+          api("/api/timeframes").catch(() => []),
+          api("/api/data-providers").catch(() => []),
+          api("/api/llm/providers").catch(() => []),
+          api("/api/llm/models").catch(() => []),
+        ]);
+
+        // Populate strategy + broker selects (once per load)
+        const stratSel = document.getElementById("ag-strategy");
+        stratSel.innerHTML = "";
+        strategies.forEach(s => {
+          const o = document.createElement("option");
+          o.value = s.code; o.textContent = s.name + " (" + s.code + ")";
+          stratSel.appendChild(o);
+        });
+        const brokSel = document.getElementById("ag-broker");
+        brokSel.innerHTML = "<option value=\"\">— none —</option>";
+        brokers.forEach(b => {
+          const o = document.createElement("option");
+          o.value = b.id; o.textContent = b.label + " (" + b.broker + "/" + b.trade_scope + ")";
+          brokSel.appendChild(o);
+        });
+        // Asset classes
+        const acSel = document.getElementById("ag-asset-class");
+        acSel.innerHTML = "";
+        assetClasses.forEach(ac => {
+          const o = document.createElement("option");
+          o.value = ac.code; o.textContent = ac.name + (ac.available === false ? " (plan locked)" : "");
+          if (ac.available === false) o.disabled = true;
+          acSel.appendChild(o);
+        });
+        // Timeframes
+        const tfSel = document.getElementById("ag-timeframe");
+        tfSel.innerHTML = "";
+        timeframes.forEach(t => {
+          const o = document.createElement("option");
+          o.value = t.code; o.textContent = t.code;
+          if (t.code === "1d") o.selected = true;
+          tfSel.appendChild(o);
+        });
+        // Data providers
+        const dpSel = document.getElementById("ag-data-provider");
+        dpSel.innerHTML = "";
+        (dataProviders.length ? dataProviders : [{code: "synthetic", name: "Synthetic"}]).forEach(p => {
+          const o = document.createElement("option");
+          o.value = p.code; o.textContent = (p.name || p.code) + (p.available === false ? " (plan locked)" : "");
+          if (p.available === false) o.disabled = true;
+          dpSel.appendChild(o);
+        });
+        // LLM providers
+        const lpSel = document.getElementById("ag-llm-provider");
+        lpSel.innerHTML = "<option value=\"\">(auto)</option>";
+        llmProviders.forEach(p => {
+          const o = document.createElement("option");
+          o.value = p.code; o.textContent = (p.name || p.code) + (p.available === false ? " (plan locked)" : "");
+          if (p.available === false) o.disabled = true;
+          lpSel.appendChild(o);
+        });
+        // Models — show all, mark unavailable
+        const mSel = document.getElementById("ag-model");
+        const prevModel = mSel.value;
+        mSel.innerHTML = "<option value=\"mock\">mock</option>";
+        llmModels.forEach(m => {
+          const o = document.createElement("option");
+          o.value = m.id;
+          const tagBits = (m.tags || []).slice(0, 3).join(",");
+          o.textContent = m.id + " — " + m.provider + (tagBits ? " [" + tagBits + "]" : "")
+                          + (m.available === false ? " (plan locked)" : "");
+          if (m.available === false) o.disabled = true;
+          mSel.appendChild(o);
+        });
+        if (prevModel) mSel.value = prevModel;
+
+        if (!agents.length) {
+          tbody.innerHTML = "<tr><td colspan=\"5\" class=\"muted\">No agents yet.</td></tr>";
+          return;
+        }
+        tbody.innerHTML = "";
+        agents.forEach(a => {
+          const tr = document.createElement("tr");
+          tr.innerHTML =
+            "<td>" + escapeHtml(a.name) + "</td>" +
+            "<td>" + escapeHtml(a.strategy_code) + "</td>" +
+            "<td><span class=\"badge\">" + escapeHtml(a.automation) + "</span></td>" +
+            "<td><span class=\"badge " + (a.status === "active" ? "ok" : "warn") + "\">" +
+              escapeHtml(a.status) + "</span></td>" +
+            "<td></td>";
+          const td = tr.lastElementChild;
+          const runBtn = document.createElement("button");
+          runBtn.className = "ghost"; runBtn.textContent = "Run";
+          runBtn.addEventListener("click", async () => {
+            try { await api("/api/agents/" + encodeURIComponent(a.id) + "/run", { method: "POST" });
+              showToast("Run queued", "ok"); }
+            catch (err) { showToast(err.message, "err"); }
+          });
+          td.appendChild(runBtn);
+          tbody.appendChild(tr);
+        });
+      } catch (err) {
+        if (err.status === 401) { enterLoggedOut(); return; }
+        tbody.innerHTML = "<tr><td colspan=\"5\" class=\"muted\">Failed to load: " + escapeHtml(err.message) + "</td></tr>";
+      }
+    }
+
+    document.getElementById("form-agent").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      let cfg;
+      try { cfg = JSON.parse(document.getElementById("ag-config").value || "{}"); }
+      catch (_) { showToast("Config must be valid JSON", "err"); return; }
+      const symbols = document.getElementById("ag-symbols").value
+        .split(",").map(s => s.trim()).filter(Boolean);
+      const broker = document.getElementById("ag-broker").value || null;
+      try {
+        await api("/api/agents", {
+          method: "POST",
+          body: {
+            name: document.getElementById("ag-name").value.trim(),
+            strategy_code: document.getElementById("ag-strategy").value,
+            config: cfg,
+            automation: document.getElementById("ag-automation").value,
+            model_code: document.getElementById("ag-model").value,
+            llm_provider: document.getElementById("ag-llm-provider").value || "",
+            asset_class: document.getElementById("ag-asset-class").value || "equity",
+            timeframe: document.getElementById("ag-timeframe").value || "1d",
+            data_provider: document.getElementById("ag-data-provider").value || "synthetic",
+            broker_connection_id: broker,
+            allowed_symbols: symbols,
+          },
+        });
+        showToast("Agent created", "ok");
+        e.target.reset();
+        document.getElementById("ag-config").value = "{}";
+        loadAgents();
+      } catch (err) { showToast(err.message, "err"); }
+    });
+
+    // ---------- Brokers ----------
+    async function loadBrokers() {
+      const tbody = document.getElementById("brokers-tbody");
+      tbody.innerHTML = "<tr><td colspan=\"5\" class=\"muted\">Loading…</td></tr>";
+      try {
+        const rows = await api("/api/broker-connections");
+        if (!rows.length) {
+          tbody.innerHTML = "<tr><td colspan=\"5\" class=\"muted\">No connections yet.</td></tr>";
+          return;
+        }
+        tbody.innerHTML = "";
+        rows.forEach(b => {
+          const tr = document.createElement("tr");
+          tr.innerHTML =
+            "<td>" + escapeHtml(b.label) + "</td>" +
+            "<td>" + escapeHtml(b.broker) + "</td>" +
+            "<td><span class=\"badge\">" + escapeHtml(b.trade_scope) + "</span></td>" +
+            "<td>$" + (b.cash_cents / 100).toFixed(2) + "</td>" +
+            "<td></td>";
+          const td = tr.lastElementChild;
+          const del = document.createElement("button");
+          del.className = "danger"; del.textContent = "Delete";
+          del.addEventListener("click", async () => {
+            if (!confirm("Delete this connection?")) return;
+            try {
+              await api("/api/broker-connections/" + encodeURIComponent(b.id), { method: "DELETE" });
+              showToast("Deleted", "ok"); loadBrokers();
+            } catch (err) { showToast(err.message, "err"); }
+          });
+          td.appendChild(del);
+          tbody.appendChild(tr);
+        });
+      } catch (err) {
+        if (err.status === 401) { enterLoggedOut(); return; }
+        tbody.innerHTML = "<tr><td colspan=\"5\" class=\"muted\">Failed: " + escapeHtml(err.message) + "</td></tr>";
+      }
+    }
+
+    document.getElementById("form-broker").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      try {
+        await api("/api/broker-connections", {
+          method: "POST",
+          body: {
+            broker: document.getElementById("br-broker").value,
+            label: document.getElementById("br-label").value.trim(),
+            trade_scope: document.getElementById("br-scope").value,
+            api_key: document.getElementById("br-key").value || null,
+            api_secret: document.getElementById("br-secret").value || null,
+          },
+        });
+        showToast("Connection added", "ok");
+        e.target.reset();
+        loadBrokers();
+      } catch (err) { showToast(err.message, "err"); }
+    });
+
+    // ---------- LLM Models ----------
+    async function loadModels() {
+      const tbody = document.getElementById("models-tbody");
+      const tag = document.getElementById("llm-tag-filter").value;
+      tbody.innerHTML = "<tr><td colspan=\"7\" class=\"muted\">Loading…</td></tr>";
+      try {
+        const qs = tag ? "?tag=" + encodeURIComponent(tag) : "";
+        const models = await api("/api/llm/models" + qs);
+        if (!models.length) {
+          tbody.innerHTML = "<tr><td colspan=\"7\" class=\"muted\">No models match.</td></tr>";
+          return;
+        }
+        tbody.innerHTML = "";
+        models.forEach(m => {
+          const tr = document.createElement("tr");
+          tr.innerHTML =
+            "<td><strong>" + escapeHtml(m.id) + "</strong>"
+              + (m.notes ? "<br><span class=\"muted small\">" + escapeHtml(m.notes) + "</span>" : "") + "</td>"
+            + "<td>" + escapeHtml(m.provider) + "</td>"
+            + "<td>" + (m.tags || []).map(escapeHtml).join(", ") + "</td>"
+            + "<td>" + (m.context_tokens || 0).toLocaleString() + "</td>"
+            + "<td>" + (m.cost_per_1k_in || 0).toFixed(4) + "</td>"
+            + "<td>" + escapeHtml(m.license || "") + "</td>"
+            + "<td>" + (m.available === false ? "🔒 plan locked" : "✅") + "</td>";
+          tbody.appendChild(tr);
+        });
+      } catch (err) {
+        if (err.status === 401) { enterLoggedOut(); return; }
+        tbody.innerHTML = "<tr><td colspan=\"7\" class=\"muted\">Failed: " + escapeHtml(err.message) + "</td></tr>";
+      }
+    }
+    document.addEventListener("change", (e) => {
+      if (e.target && e.target.id === "llm-tag-filter") loadModels();
+    });
+
+    // ---------- Plans ----------
+    async function loadPlans() {
+      const tbody = document.getElementById("plans-tbody");
+      tbody.innerHTML = "<tr><td colspan=\"4\" class=\"muted\">Loading…</td></tr>";
+      try {
+        const plans = await api("/api/plans");
+        if (!plans.length) {
+          tbody.innerHTML = "<tr><td colspan=\"4\" class=\"muted\">No plans available.</td></tr>";
+          return;
+        }
+        tbody.innerHTML = "";
+        plans.forEach(p => {
+          const tr = document.createElement("tr");
+          tr.innerHTML =
+            "<td><strong>" + escapeHtml(p.name || p.code) + "</strong><br><span class=\"muted\">" +
+              escapeHtml(p.code) + "</span></td>" +
+            "<td>$" + ((p.price_cents || 0) / 100).toFixed(2) + "</td>" +
+            "<td><pre>" + escapeHtml(JSON.stringify(p.entitlements || {}, null, 2)) + "</pre></td>" +
+            "<td></td>";
+          const td = tr.lastElementChild;
+          const btn = document.createElement("button");
+          btn.className = "primary"; btn.textContent = "Select";
+          btn.addEventListener("click", async () => {
+            try {
+              await api("/api/subscriptions", { method: "POST", body: { plan_code: p.code } });
+              showToast("Plan updated to " + p.code, "ok");
+              loadDashboard();
+            } catch (err) { showToast(err.message, "err"); }
+          });
+          td.appendChild(btn);
+          tbody.appendChild(tr);
+        });
+      } catch (err) {
+        if (err.status === 401) { enterLoggedOut(); return; }
+        tbody.innerHTML = "<tr><td colspan=\"4\" class=\"muted\">Failed: " + escapeHtml(err.message) + "</td></tr>";
+      }
+    }
+
+    // ---------- Utils ----------
+    function escapeHtml(s) {
+      return String(s == null ? "" : s)
+        .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+    }
+
+    // ---------- Boot ----------
+    (async function init() {
+      // Try /api/me — if it succeeds, we already have a valid cookie.
+      try {
+        const me = await api("/api/me");
+        CURRENT_USER = me;
+        enterLoggedIn(me);
+      } catch (_) {
+        enterLoggedOut();
+      }
+      pingHealth("health-out");
+    })();
+  })();
+  </script>
+</body>
+</html>

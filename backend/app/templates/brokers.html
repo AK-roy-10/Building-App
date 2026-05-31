@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+{% block title %}Broker connections{% endblock %}
+{% block content %}
+<h2>Broker connections</h2>
+<p class="muted">Paper accounts run entirely in-process. Live trading requires Pro+ plan and an Alpaca paper/live key.</p>
+
+<div class="card">
+  <h3>+ Add connection</h3>
+  <form onsubmit="addConn(event)">
+    <div class="grid">
+      <div><label>Broker</label>
+        <select name="broker">
+          <option value="paper">Paper (built-in)</option>
+          <option value="alpaca">Alpaca</option>
+        </select></div>
+      <div><label>Label</label><input name="label" required value="My paper account"></div>
+      <div><label>Trade scope</label>
+        <select name="trade_scope">
+          {% for s in entitlements.allowed_trade_scopes %}<option value="{{s}}">{{s}}</option>{% endfor %}
+        </select></div>
+      <div><label>API key (optional, alpaca)</label><input name="api_key" autocomplete="off"></div>
+      <div><label>API secret (optional, alpaca)</label><input name="api_secret" type="password" autocomplete="off"></div>
+    </div>
+    <button class="btn" style="margin-top:12px">Add</button>
+    <p id="err" class="danger"></p>
+  </form>
+</div>
+
+<div class="card">
+  <h3>Existing</h3>
+  <table>
+    <tr><th>Label</th><th>Broker</th><th>Scope</th><th>Cash</th><th>Positions</th><th></th></tr>
+    {% for c in connections %}
+    <tr>
+      <td>{{ c.label }}</td>
+      <td>{{ c.broker }}</td>
+      <td><span class="badge {{ 'bad' if c.trade_scope=='live' else 'good' }}">{{ c.trade_scope }}</span></td>
+      <td>${{ '%.2f' % (c.cash_cents/100) }}</td>
+      <td><code>{{ c.positions_json | tojson }}</code></td>
+      <td><button class="btn ghost danger" onclick="delConn('{{ c.id }}')">Delete</button></td>
+    </tr>
+    {% else %}
+    <tr><td colspan="6" class="muted">No connections yet.</td></tr>
+    {% endfor %}
+  </table>
+</div>
+
+<script>
+async function addConn(e){ e.preventDefault();
+  const f = e.target;
+  const body = {broker:f.broker.value, label:f.label.value, trade_scope:f.trade_scope.value,
+                api_key:f.api_key.value||null, api_secret:f.api_secret.value||null};
+  const r = await fetch('/api/broker-connections',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+  if (r.ok) location.reload();
+  else document.getElementById('err').textContent = (await r.json()).detail || 'Failed';
+}
+async function delConn(id){
+  if(!confirm('Delete?')) return;
+  await fetch('/api/broker-connections/'+id,{method:'DELETE'}); location.reload();
+}
+</script>
+{% endblock %}

@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block title %}Approvals{% endblock %}
+{% block content %}
+<h2>Approval inbox</h2>
+<p class="muted">These trade proposals require your explicit approval before being sent to the broker.</p>
+<div class="card">
+<table>
+  <tr><th>Time</th><th>Symbol</th><th>Side</th><th>Qty</th><th>Risk verdict</th><th>Reason</th><th>Decide</th></tr>
+  {% for p in proposals %}
+  <tr>
+    <td>{{ p.created_at.strftime('%H:%M:%S') }}</td>
+    <td><strong>{{ p.symbol }}</strong></td>
+    <td>{{ p.side }}</td>
+    <td>{{ p.qty }}</td>
+    <td><code>{{ p.risk_verdict_json.get('reasons',[]) | join('; ') }}</code></td>
+    <td>{{ p.reason }}</td>
+    <td>
+      <button class="btn good" onclick="decide('{{p.id}}',true)">Approve</button>
+      <button class="btn danger" onclick="decide('{{p.id}}',false)">Reject</button>
+    </td>
+  </tr>
+  {% else %}
+  <tr><td colspan="7" class="muted">Inbox is empty 🎉</td></tr>
+  {% endfor %}
+</table>
+</div>
+<script>
+async function decide(id, ok){
+  const r = await fetch('/api/approvals/'+id,{method:'POST',headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({approve: ok, note: ''})});
+  if (r.ok) location.reload();
+  else alert((await r.json()).detail);
+}
+</script>
+{% endblock %}

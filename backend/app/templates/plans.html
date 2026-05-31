@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block title %}Plans{% endblock %}
+{% block content %}
+<h2>Subscription plans</h2>
+<p class="muted">Current plan: <strong>{{ plan_code }}</strong></p>
+<div class="row">
+{% for p in plans %}
+  <div class="card col">
+    <div class="kicker">{{ p.code }}</div>
+    <h3>{{ p.name }}</h3>
+    <p>${{ '%.2f' % (p.price_cents/100) }} / month</p>
+    <ul>
+      {% for k,v in p.entitlements_json.items() %}
+        <li><span class="muted">{{ k }}:</span> {{ v }}</li>
+      {% endfor %}
+    </ul>
+    <button class="btn" onclick="subscribe('{{ p.code }}')"
+            {% if plan_code == p.code %}disabled{% endif %}>
+      {{ 'Current' if plan_code == p.code else 'Choose' }}
+    </button>
+  </div>
+{% endfor %}
+</div>
+<script>
+async function subscribe(code){
+  const r = await fetch('/api/subscriptions',{method:'POST',headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({plan_code: code})});
+  if (r.ok) location.reload();
+  else alert((await r.json()).detail || 'Failed');
+}
+</script>
+{% endblock %}

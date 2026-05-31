@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+{% block title %}New agent{% endblock %}
+{% block content %}
+<h2>Create an agent</h2>
+<p class="muted">Pick a strategy, set parameters, choose automation level. Agents start in your selected mode but live trading still passes through the risk engine and (in live_manual) the approval inbox.</p>
+
+<form onsubmit="createAgent(event)" class="card">
+  <div class="grid">
+    <div><label>Name</label><input name="name" required value="My momentum bot"></div>
+    <div><label>Strategy</label>
+      <select name="strategy" id="strategy" onchange="syncStrategy()">
+        {% for s in strategies %}
+        <option value="{{s.code}}" data-schema='{{s.schema}}' data-desc="{{s.description}}">{{s.name}}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div><label>Model</label>
+      <select name="model_code">
+        {% for m in entitlements.allowed_models %}<option value="{{m}}">{{m}}</option>{% endfor %}
+      </select>
+    </div>
+    <div><label>Automation</label>
+      <select name="automation">
+        {% for a in entitlements.allowed_automation %}<option value="{{a}}">{{a}}</option>{% endfor %}
+      </select>
+    </div>
+    <div><label>Broker connection (required if not 'suggest')</label>
+      <select name="broker_connection_id">
+        <option value="">(none — research only)</option>
+        {% for c in connections %}<option value="{{c.id}}">{{c.label}} [{{c.broker}}/{{c.trade_scope}}]</option>{% endfor %}
+      </select>
+    </div>
+    <div><label>Max per-order notional ($)</label><input name="max_notional" type="number" min="1" value="500"></div>
+    <div><label>Max orders per run</label><input name="max_orders" type="number" min="1" value="3"></div>
+    <div><label>Allowed symbols (CSV, blank = any)</label><input name="allowed_symbols" placeholder="AAPL,MSFT"></div>
+  </div>
+
+  <div style="margin-top:12px">
+    <label>Strategy description</label>
+    <p id="desc" class="muted"></p>
+    <label>Config (JSON, validated against strategy schema)</label>
+    <textarea name="config" id="config" rows="8">{"symbol":"AAPL","qty":1,"threshold_pct":1}</textarea>
+    <label>Schema (read-only)</label>
+    <pre id="schema"></pre>
+  </div>
+
+  <p id="err" class="danger"></p>
+  <button class="btn" type="submit">Create agent</button>
+</form>
+
+<script>
+function syncStrategy(){
+  const sel = document.getElementById('strategy');
+  const opt = sel.options[sel.selectedIndex];
+  document.getElementById('desc').textContent = opt.dataset.desc;
+  document.getElementById('schema').textContent = opt.dataset.schema;
+}
+syncStrategy();
+
+async function createAgent(e){ e.preventDefault();
+  const f = e.target;
+  let cfg;
+  try { cfg = JSON.parse(f.config.value); } catch(_) { document.getElementById('err').textContent='Config is not valid JSON'; return; }
+  const body = {
+    name:f.name.value, strategy_code:f.strategy.value, config:cfg,
+    automation:f.automation.value, model_code:f.model_code.value,
+    broker_connection_id: f.broker_connection_id.value || null,
+    max_position_notional_cents: Math.round(parseFloat(f.max_notional.value)*100),
+    max_orders_per_run: parseInt(f.max_orders.value,10),
+    allowed_symbols: f.allowed_symbols.value.split(',').map(s=>s.trim()).filter(Boolean),
+  };
+  const r = await fetch('/api/agents',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+  if (r.ok) location='/agents';
+  else { const d = await r.json(); document.getElementById('err').textContent = JSON.stringify(d.detail); }
+}
+</script>
+{% endblock %}

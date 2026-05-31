@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block title %}Agents{% endblock %}
+{% block content %}
+<div style="display:flex; align-items:center">
+  <h2 style="flex:1">Agents</h2>
+  <a class="btn" href="/agents/new">+ New agent</a>
+</div>
+<div class="card">
+<table>
+  <tr><th>Name</th><th>Strategy</th><th>Automation</th><th>Status</th><th></th></tr>
+  {% for a in agents %}
+  <tr>
+    <td><a href="/agents/{{a.id}}">{{ a.name }}</a></td>
+    <td>{{ a.strategy_code }}</td>
+    <td><span class="badge {% if a.automation.value in ['live_manual','live_auto'] %}bad{% elif a.automation.value=='paper' %}warn{% else %}good{% endif %}">{{ a.automation.value }}</span></td>
+    <td>{{ a.status.value }}</td>
+    <td>
+      <button class="btn" onclick="runAgent('{{a.id}}')">Run now</button>
+    </td>
+  </tr>
+  {% else %}
+  <tr><td colspan="5" class="muted">No agents yet. <a href="/agents/new">Create your first agent</a>.</td></tr>
+  {% endfor %}
+</table>
+</div>
+<script>
+async function runAgent(id){
+  const r = await fetch('/api/agents/'+id+'/run',{method:'POST'});
+  if (r.ok) { alert('Run queued — check the agent detail page in a few seconds.'); }
+  else { alert((await r.json()).detail || 'Failed'); }
+}
+</script>
+{% endblock %}
