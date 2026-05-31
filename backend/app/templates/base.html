@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{% block title %}AI Trading Agents{% endblock %}</title>
+<link rel="stylesheet" href="/static/app.css">
+<script src="https://unpkg.com/htmx.org@1.9.12"></script>
+</head>
+<body>
+<header>
+  <a href="/dashboard" class="brand">⚡ AgentDesk</a>
+  {% if user %}
+    <a href="/dashboard">Dashboard</a>
+    <a href="/agents">Agents</a>
+    <a href="/brokers">Brokers</a>
+    <a href="/approvals">Approvals</a>
+    <a href="/audit">Audit</a>
+    <a href="/plans">Plan</a>
+    <span class="spacer"></span>
+    <span class="muted">{{ user.email }} · <span class="badge">{{ plan_code }}</span></span>
+    <form method="post" action="/api/auth/logout" style="display:inline">
+      <button class="btn ghost" type="submit" onclick="event.preventDefault();
+        fetch('/api/auth/logout',{method:'POST'}).then(()=>location='/login')">Logout</button>
+    </form>
+  {% else %}
+    <span class="spacer"></span>
+    <a href="/login">Login</a>
+    <a href="/signup">Sign up</a>
+  {% endif %}
+</header>
+<main>
+  <div class="warning">
+    ⚠️ <strong>Not financial advice.</strong> This is automated software. Markets carry risk of loss.
+    The LLM does not place trades; it only analyzes. Live trading requires explicit approval
+    and runs behind risk limits and a kill-switch.
+  </div>
+  {% block content %}{% endblock %}
+</main>
+</body>
+</html>

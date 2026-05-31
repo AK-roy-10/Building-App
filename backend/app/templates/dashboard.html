@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% block title %}Dashboard{% endblock %}
+{% block content %}
+<div class="row">
+  <div class="card col">
+    <div class="kicker">Organization</div>
+    <h2 style="margin:6px 0">{{ org.name }}</h2>
+    <p>Plan: <span class="badge">{{ plan_code }}</span></p>
+    <p>Daily loss limit: ${{ '%.2f' % (org.daily_loss_limit_cents/100) }}</p>
+    <p>Kill switch:
+      {% if org.kill_switch %}<span class="badge bad">ENGAGED</span>{% else %}<span class="badge good">off</span>{% endif %}
+    </p>
+    <button class="btn {{ 'good' if org.kill_switch else 'danger' }}"
+            onclick="killSwitch({{ 'false' if org.kill_switch else 'true' }})">
+      {{ 'Disengage' if org.kill_switch else 'Engage' }} kill switch
+    </button>
+  </div>
+  <div class="card col">
+    <div class="kicker">Agents</div>
+    <h2 style="margin:6px 0">{{ agents|length }}</h2>
+    <p class="muted">Max allowed: {{ entitlements.max_agents }}</p>
+    <a class="btn" href="/agents/new">+ New agent</a>
+    <a class="btn ghost" href="/agents">View all</a>
+  </div>
+  <div class="card col">
+    <div class="kicker">Broker connections</div>
+    <h2 style="margin:6px 0">{{ connections|length }}</h2>
+    <p class="muted">Max allowed: {{ entitlements.max_broker_connections }}</p>
+    <a class="btn" href="/brokers">Manage brokers</a>
+  </div>
+  <div class="card col">
+    <div class="kicker">Pending approvals</div>
+    <h2 style="margin:6px 0">{{ pending_approvals }}</h2>
+    <a class="btn" href="/approvals">Open inbox</a>
+  </div>
+</div>
+
+<div class="card">
+  <h3>Your plan entitlements</h3>
+  <pre>{{ entitlements | tojson(indent=2) }}</pre>
+</div>
+
+<script>
+async function killSwitch(v){
+  await fetch('/api/org/kill-switch?value='+v,{method:'POST'});
+  location.reload();
+}
+</script>
+{% endblock %}

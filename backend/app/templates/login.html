@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block title %}Login · AgentDesk{% endblock %}
+{% block content %}
+<div class="card" style="max-width:480px; margin: 40px auto;">
+  <h2>Log in</h2>
+  <form onsubmit="login(event)">
+    <label>Email</label><input type="email" name="email" required>
+    <label>Password</label><input type="password" name="password" required>
+    <p id="err" class="danger" style="margin-top:10px"></p>
+    <button class="btn" type="submit" style="margin-top:14px">Log in</button>
+    <a href="/signup" class="muted" style="margin-left:12px">No account? Sign up</a>
+  </form>
+</div>
+<script>
+async function login(e){ e.preventDefault();
+  const f = e.target;
+  const r = await fetch('/api/auth/login',{method:'POST',headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({email:f.email.value, password:f.password.value})});
+  if (r.ok) location='/dashboard';
+  else { const d = await r.json(); document.getElementById('err').textContent = d.detail || 'Login failed'; }
+}
+</script>
+{% endblock %}

@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+{% block title %}{{ agent.name }}{% endblock %}
+{% block content %}
+<h2>{{ agent.name }} <span class="badge">{{ agent.strategy_code }}</span>
+  <span class="badge {% if agent.automation.value in ['live_manual','live_auto'] %}bad{% elif agent.automation.value=='paper' %}warn{% else %}good{% endif %}">{{ agent.automation.value }}</span>
+  <span class="badge">{{ agent.status.value }}</span>
+</h2>
+<p>
+  <button class="btn" onclick="runAgent('{{agent.id}}')">Run now</button>
+  <button class="btn ghost" onclick="pauseAgent('{{agent.id}}')">Pause</button>
+</p>
+
+<div class="row">
+<div class="card col">
+  <h3>Configuration</h3>
+  <pre>{{ agent.config_json | tojson(indent=2) }}</pre>
+  <p class="muted">Risk: max notional ${{ '%.2f' % (agent.max_position_notional_cents/100) }} ·
+    max orders/run {{ agent.max_orders_per_run }}
+    {% if agent.allowed_symbols_csv %} · allowed: {{ agent.allowed_symbols_csv }}{% endif %}</p>
+</div>
+<div class="card col">
+  <h3>Recent runs</h3>
+  <table>
+    <tr><th>Started</th><th>Status</th><th>Summary</th></tr>
+    {% for r in runs %}
+    <tr><td>{{ r.started_at.strftime('%Y-%m-%d %H:%M:%S') }}</td>
+        <td>{{ r.status }}</td><td>{{ r.summary }}</td></tr>
+    {% else %}<tr><td colspan="3" class="muted">No runs yet.</td></tr>{% endfor %}
+  </table>
+</div>
+</div>
+
+<div class="card">
+  <h3>Latest LLM rationale</h3>
+  {% if runs %}<p>{{ runs[0].llm_rationale }}</p>{% else %}<p class="muted">—</p>{% endif %}
+</div>
+
+<div class="card">
+  <h3>Recent proposals</h3>
+  <table>
+    <tr><th>Time</th><th>Symbol</th><th>Side</th><th>Qty</th><th>Status</th><th>Reasons</th></tr>
+    {% for p in proposals %}
+    <tr>
+      <td>{{ p.created_at.strftime('%H:%M:%S') }}</td>
+      <td>{{ p.symbol }}</td><td>{{ p.side }}</td><td>{{ p.qty }}</td>
+      <td>{{ p.status.value }}</td>
+      <td><code>{{ p.risk_verdict_json.get('reasons', []) | join('; ') }}</code></td>
+    </tr>
+    {% else %}<tr><td colspan="6" class="muted">No proposals yet.</td></tr>{% endfor %}
+  </table>
+</div>
+
+<script>
+async function runAgent(id){
+  const r = await fetch('/api/agents/'+id+'/run',{method:'POST'});
+  if (r.ok) setTimeout(()=>location.reload(), 800);
+  else alert((await r.json()).detail);
+}
+async function pauseAgent(id){
+  await fetch('/api/agents/'+id+'/pause',{method:'POST'}); location.reload();
+}
+</script>
+{% endblock %}

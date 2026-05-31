@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block title %}Sign up · AgentDesk{% endblock %}
+{% block content %}
+<div class="card" style="max-width:520px; margin: 40px auto;">
+  <h2>Create your organization</h2>
+  <p class="muted">Free plan. Paper trading only. Upgrade later for live trading.</p>
+  <form id="f" onsubmit="signup(event)">
+    <label>Email</label><input type="email" name="email" required>
+    <label>Password (min 8)</label><input type="password" name="password" minlength="8" required>
+    <label>Organization name</label><input name="org_name" required>
+    <label style="display:flex; gap:8px; align-items:center; margin-top:14px;">
+      <input type="checkbox" name="accept" required style="width:auto;">
+      I have read and accept the risk disclaimer. This is not financial advice.
+    </label>
+    <p id="err" class="danger" style="margin-top:10px"></p>
+    <button class="btn" type="submit" style="margin-top:14px">Create account</button>
+    <a href="/login" style="margin-left:12px" class="muted">Have an account? Log in</a>
+  </form>
+</div>
+<script>
+async function signup(e){ e.preventDefault();
+  const f = e.target;
+  const body = {email:f.email.value, password:f.password.value, org_name:f.org_name.value,
+                accept_risk_disclaimer: f.accept.checked};
+  const r = await fetch('/api/auth/signup',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+  if (r.ok) location='/dashboard';
+  else { const d = await r.json(); document.getElementById('err').textContent = d.detail || 'Signup failed'; }
+}
+</script>
+{% endblock %}

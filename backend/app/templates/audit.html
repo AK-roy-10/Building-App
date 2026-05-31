@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% block title %}Audit log{% endblock %}
+{% block content %}
+<h2>Audit log</h2>
+<p class="muted">Append-only record of every meaningful action by users, agents, and the system.</p>
+<div class="card">
+<table>
+<tr><th>Time</th><th>Actor</th><th>Event</th><th>Target</th><th>Payload</th></tr>
+{% for e in events %}
+<tr>
+  <td>{{ e.created_at.strftime('%Y-%m-%d %H:%M:%S') }}</td>
+  <td>{{ e.actor_type }}{% if e.actor_user_id %} ({{ e.actor_user_id[:8] }}…){% endif %}</td>
+  <td><span class="badge">{{ e.event_type }}</span></td>
+  <td>{{ e.target_type }} {% if e.target_id %}<code>{{ e.target_id[:12] }}…</code>{% endif %}</td>
+  <td><pre style="margin:0;max-width:540px;white-space:pre-wrap">{{ e.payload_json | tojson }}</pre></td>
+</tr>
+{% else %}<tr><td colspan="5" class="muted">No events.</td></tr>{% endfor %}
+</table>
+</div>
+{% endblock %}
