@@ -106,6 +106,7 @@
       <button data-view="agents">Agents</button>
       <button data-view="brokers">Brokers</button>
       <button data-view="plans">Plans</button>
+      <button data-view="models">LLM Models</button>
       <span class="user-pill" id="user-pill"></span>
       <button id="logout-btn" class="ghost">Logout</button>
     </nav>
@@ -228,8 +229,23 @@
               <label>Model</label>
               <select id="ag-model">
                 <option value="mock">mock</option>
-                <option value="openai">openai</option>
               </select>
+            </div>
+            <div class="field">
+              <label>LLM provider</label>
+              <select id="ag-llm-provider"><option value="">(auto)</option></select>
+            </div>
+            <div class="field">
+              <label>Asset class</label>
+              <select id="ag-asset-class"></select>
+            </div>
+            <div class="field">
+              <label>Timeframe</label>
+              <select id="ag-timeframe"></select>
+            </div>
+            <div class="field">
+              <label>Data provider</label>
+              <select id="ag-data-provider"></select>
             </div>
             <div class="field">
               <label>Broker connection (optional)</label>
@@ -304,6 +320,30 @@
         </table>
       </div>
     </section>
+
+    <!-- LLM MODELS -->
+    <section id="view-models" class="hide">
+      <div class="card">
+        <h2>LLM model catalog</h2>
+        <div class="field" style="max-width:480px">
+          <label>Filter by tag</label>
+          <select id="llm-tag-filter">
+            <option value="">(all)</option>
+            <option value="finance" selected>finance</option>
+            <option value="general">general</option>
+            <option value="open">open</option>
+            <option value="self-hosted">self-hosted</option>
+            <option value="cheap">cheap</option>
+            <option value="long-context">long-context</option>
+          </select>
+        </div>
+        <table>
+          <thead><tr><th>Model</th><th>Provider</th><th>Tags</th><th>Context</th><th>$/1k in</th><th>License</th><th>Available</th></tr></thead>
+          <tbody id="models-tbody"><tr><td colspan="7" class="muted">Loading…</td></tr></tbody>
+        </table>
+        <p class="muted small">Models marked "plan locked" require a plan upgrade. Self-hosted / Ollama models cost $0 once running.</p>
+      </div>
+    </section>
   </main>
 
   <div id="toast" class="toast"></div>
@@ -373,6 +413,7 @@
         if (v === "agents") loadAgents();
         if (v === "brokers") loadBrokers();
         if (v === "plans") loadPlans();
+        if (v === "models") loadModels();
       });
     });
 
@@ -514,10 +555,15 @@
       const tbody = document.getElementById("agents-tbody");
       tbody.innerHTML = "<tr><td colspan=\"5\" class=\"muted\">Loading…</td></tr>";
       try {
-        const [agents, strategies, brokers] = await Promise.all([
+        const [agents, strategies, brokers, assetClasses, timeframes, dataProviders, llmProviders, llmModels] = await Promise.all([
           api("/api/agents"),
           api("/api/agents/strategies"),
           api("/api/broker-connections").catch(() => []),
+          api("/api/asset-classes").catch(() => []),
+          api("/api/timeframes").catch(() => []),
+          api("/api/data-providers").catch(() => []),
+          api("/api/llm/providers").catch(() => []),
+          api("/api/llm/models").catch(() => []),
         ]);
 
         // Populate strategy + broker selects (once per load)
@@ -535,6 +581,56 @@
           o.value = b.id; o.textContent = b.label + " (" + b.broker + "/" + b.trade_scope + ")";
           brokSel.appendChild(o);
         });
+        // Asset classes
+        const acSel = document.getElementById("ag-asset-class");
+        acSel.innerHTML = "";
+        assetClasses.forEach(ac => {
+          const o = document.createElement("option");
+          o.value = ac.code; o.textContent = ac.name + (ac.available === false ? " (plan locked)" : "");
+          if (ac.available === false) o.disabled = true;
+          acSel.appendChild(o);
+        });
+        // Timeframes
+        const tfSel = document.getElementById("ag-timeframe");
+        tfSel.innerHTML = "";
+        timeframes.forEach(t => {
+          const o = document.createElement("option");
+          o.value = t.code; o.textContent = t.code;
+          if (t.code === "1d") o.selected = true;
+          tfSel.appendChild(o);
+        });
+        // Data providers
+        const dpSel = document.getElementById("ag-data-provider");
+        dpSel.innerHTML = "";
+        (dataProviders.length ? dataProviders : [{code: "synthetic", name: "Synthetic"}]).forEach(p => {
+          const o = document.createElement("option");
+          o.value = p.code; o.textContent = (p.name || p.code) + (p.available === false ? " (plan locked)" : "");
+          if (p.available === false) o.disabled = true;
+          dpSel.appendChild(o);
+        });
+        // LLM providers
+        const lpSel = document.getElementById("ag-llm-provider");
+        lpSel.innerHTML = "<option value=\"\">(auto)</option>";
+        llmProviders.forEach(p => {
+          const o = document.createElement("option");
+          o.value = p.code; o.textContent = (p.name || p.code) + (p.available === false ? " (plan locked)" : "");
+          if (p.available === false) o.disabled = true;
+          lpSel.appendChild(o);
+        });
+        // Models — show all, mark unavailable
+        const mSel = document.getElementById("ag-model");
+        const prevModel = mSel.value;
+        mSel.innerHTML = "<option value=\"mock\">mock</option>";
+        llmModels.forEach(m => {
+          const o = document.createElement("option");
+          o.value = m.id;
+          const tagBits = (m.tags || []).slice(0, 3).join(",");
+          o.textContent = m.id + " — " + m.provider + (tagBits ? " [" + tagBits + "]" : "")
+                          + (m.available === false ? " (plan locked)" : "");
+          if (m.available === false) o.disabled = true;
+          mSel.appendChild(o);
+        });
+        if (prevModel) mSel.value = prevModel;
 
         if (!agents.length) {
           tbody.innerHTML = "<tr><td colspan=\"5\" class=\"muted\">No agents yet.</td></tr>";
@@ -584,6 +680,10 @@
             config: cfg,
             automation: document.getElementById("ag-automation").value,
             model_code: document.getElementById("ag-model").value,
+            llm_provider: document.getElementById("ag-llm-provider").value || "",
+            asset_class: document.getElementById("ag-asset-class").value || "equity",
+            timeframe: document.getElementById("ag-timeframe").value || "1d",
+            data_provider: document.getElementById("ag-data-provider").value || "synthetic",
             broker_connection_id: broker,
             allowed_symbols: symbols,
           },
@@ -650,6 +750,41 @@
         e.target.reset();
         loadBrokers();
       } catch (err) { showToast(err.message, "err"); }
+    });
+
+    // ---------- LLM Models ----------
+    async function loadModels() {
+      const tbody = document.getElementById("models-tbody");
+      const tag = document.getElementById("llm-tag-filter").value;
+      tbody.innerHTML = "<tr><td colspan=\"7\" class=\"muted\">Loading…</td></tr>";
+      try {
+        const qs = tag ? "?tag=" + encodeURIComponent(tag) : "";
+        const models = await api("/api/llm/models" + qs);
+        if (!models.length) {
+          tbody.innerHTML = "<tr><td colspan=\"7\" class=\"muted\">No models match.</td></tr>";
+          return;
+        }
+        tbody.innerHTML = "";
+        models.forEach(m => {
+          const tr = document.createElement("tr");
+          tr.innerHTML =
+            "<td><strong>" + escapeHtml(m.id) + "</strong>"
+              + (m.notes ? "<br><span class=\"muted small\">" + escapeHtml(m.notes) + "</span>" : "") + "</td>"
+            + "<td>" + escapeHtml(m.provider) + "</td>"
+            + "<td>" + (m.tags || []).map(escapeHtml).join(", ") + "</td>"
+            + "<td>" + (m.context_tokens || 0).toLocaleString() + "</td>"
+            + "<td>" + (m.cost_per_1k_in || 0).toFixed(4) + "</td>"
+            + "<td>" + escapeHtml(m.license || "") + "</td>"
+            + "<td>" + (m.available === false ? "🔒 plan locked" : "✅") + "</td>";
+          tbody.appendChild(tr);
+        });
+      } catch (err) {
+        if (err.status === 401) { enterLoggedOut(); return; }
+        tbody.innerHTML = "<tr><td colspan=\"7\" class=\"muted\">Failed: " + escapeHtml(err.message) + "</td></tr>";
+      }
+    }
+    document.addEventListener("change", (e) => {
+      if (e.target && e.target.id === "llm-tag-filter") loadModels();
     });
 
     // ---------- Plans ----------

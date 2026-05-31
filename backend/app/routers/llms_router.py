@@ -47,7 +47,7 @@ def models_endpoint(tag: Optional[str] = None,
             and ("*" in allowed_providers or m.provider in allowed_providers)
             and (not m.tags or "*" in allowed_tags
                  or any(t in allowed_tags for t in m.tags))
-            and (cost_cap == 0.0 or m.cost_per_1k_input <= cost_cap or m.cost_per_1k_input == 0)
+            and (cost_cap == 0.0 or m.cost_per_1k_in <= cost_cap or m.cost_per_1k_in == 0)
         )
         out.append(d)
     return out

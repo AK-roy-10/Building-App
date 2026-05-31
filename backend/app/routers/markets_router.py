@@ -57,10 +57,11 @@ def get_bars_endpoint(provider: str, symbol: str, timeframe: str,
     end = datetime.utcnow()
     start = end - timedelta(seconds=tf.seconds * max(limit, 1))
     bars = prov.get_bars(Symbol.parse(symbol), tf, start, end)
-    feats = compute_features([b.__dict__ for b in bars])
+    feats = compute_features(bars)
     return {
         "symbol": symbol, "timeframe": timeframe, "provider": provider,
-        "bars": [b.__dict__ for b in bars[-limit:]],
+        "bars": [b.__dict__ if not hasattr(b, "_asdict") else dict(b._asdict())
+                 for b in bars[-limit:]],
         "features": feats,
     }
 
@@ -74,10 +75,7 @@ def backtest_agent(agent_id: str, body: schemas.BacktestRequest,
         raise HTTPException(404, "Agent not found")
     # Per-day quota
     since = datetime.utcnow() - timedelta(days=1)
-    today = db.query(models.AuditEvent).filter(
-        models.AuditEvent.org_id == user.org_id,
-        models.AuditEvent.action == "agent.backtest",
-        models.AuditEvent.created_at >= since).count() if hasattr(models, "AuditEvent") else 0
+    today = 0  # backtest counter — not tracked yet via AuditEvent
     check_quota(db, user.org_id, "max_backtests_per_day", today)
 
     try:

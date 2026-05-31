@@ -67,6 +67,10 @@ def create_connection(body: schemas.BrokerConnectionCreate,
     return {"id": conn.id}
 
 
+import logging
+log = logging.getLogger(__name__)
+
+
 @router.post("/{conn_id}/verify")
 def verify_connection(conn_id: str,
                       user: models.User = Depends(get_current_user),
@@ -77,11 +81,18 @@ def verify_connection(conn_id: str,
     try:
         broker = get_broker(db, conn)
         result = broker.verify()
-    except BrokerError as e:
-        result = {"ok": False, "detail": str(e)}
-    except Exception as e:  # defensive — never leak stack traces to the client
-        result = {"ok": False, "detail": f"verify failed: {type(e).__name__}"}
-    return result
+    except BrokerError:
+        log.warning("broker verify failed for %s", conn.broker, exc_info=True)
+        result = {"ok": False, "detail": "broker rejected the verify request"}
+    except Exception:
+        # Never leak exception details to clients.
+        log.exception("unexpected broker verify error for %s", conn.broker)
+        result = {"ok": False, "detail": "verify failed (server error)"}
+    # Sanitize: re-build a fixed-shape response so nothing the adapter put in
+    # the dict (e.g. raw upstream error text) can leak to the client.
+    ok = bool(result.get("ok"))
+    safe_detail = "ok" if ok else "verify failed"
+    return {"ok": ok, "detail": safe_detail}
 
 
 @router.delete("/{conn_id}", status_code=204)

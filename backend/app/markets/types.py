@@ -111,13 +111,23 @@ class Symbol:
     right: Optional[str] = None  # 'C' | 'P' for options
 
     def canonical(self) -> str:
-        """Canonical lossless string form used as cache key."""
-        parts = [self.asset_class, self.base.upper()]
+        """Canonical lossless string form used as cache key.
+        Format: asset_class[:exchange]:base[:quote][:expiry][:strike][:right]
+        Stable under parse(canonical(x)).canonical() == canonical(x).
+        """
+        parts = [self.asset_class]
+        if self.exchange:
+            parts.append(self.exchange.lower())
+        else:
+            parts.append("")  # placeholder so positional parse still works
+        parts.append(self.base.upper())
         if self.quote: parts.append(self.quote.upper())
-        if self.exchange: parts.append(self.exchange.lower())
         if self.expiry: parts.append(self.expiry)
         if self.strike is not None: parts.append(f"{self.strike:g}")
         if self.right: parts.append(self.right.upper())
+        # trim trailing empties for nicer display, but keep middle ones.
+        while parts and parts[-1] == "":
+            parts.pop()
         return ":".join(parts)
 
     def display(self) -> str:
@@ -135,15 +145,42 @@ class Symbol:
 
     @classmethod
     def parse(cls, raw: str, default_asset_class: str = "equity") -> "Symbol":
-        """Best-effort parser used when the UI/API submits a free-form string."""
+        """Best-effort parser used when the UI/API submits a free-form string.
+
+        Accepts:
+          - canonical form  : "equity:NASDAQ:AAPL:USD" / "equity::AAPL"
+          - slash form      : "BTC/USD" (crypto)
+          - 6-letter forex  : "EURUSD" when default_asset_class='forex'
+          - bare ticker     : "AAPL"
+        """
         if not raw:
             raise ValueError("empty symbol")
-        s = raw.strip().upper()
-        # Crypto with slash: BTC/USD
+        s = raw.strip()
+        # Canonical colon form: starts with a known asset class.
+        if ":" in s:
+            head, *rest = s.split(":")
+            head_l = head.lower()
+            if head_l in {ac.value for ac in AssetClass}:
+                # Canonical layout: [exchange_or_empty, base, quote?, expiry?, strike?, right?]
+                # Filter trailing-only empty strings, but keep the leading "" exchange slot
+                # so positions stay stable.
+                while rest and rest[-1] == "":
+                    rest.pop()
+                exchange = None
+                base = ""
+                quote = None
+                if len(rest) == 1:
+                    base = rest[0]
+                else:
+                    exchange = rest[0] or None
+                    base = rest[1] if len(rest) >= 2 else ""
+                    quote = rest[2] if len(rest) >= 3 else None
+                return cls(head_l, base.upper(), quote=quote.upper() if quote else None,
+                           exchange=exchange.lower() if exchange else None)
+        s = s.upper()
         if "/" in s:
             base, quote = s.split("/", 1)
             return cls("crypto", base, quote)
-        # 6-letter forex without separators: EURUSD
         if (default_asset_class == "forex" and len(s) == 6 and s.isalpha()):
             return cls("forex", s[:3], s[3:])
         return cls(default_asset_class, s)
