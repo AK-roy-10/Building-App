@@ -1,4 +1,6 @@
 """FastAPI app entrypoint."""
+from pathlib import Path
+
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import JSONResponse
@@ -43,6 +45,13 @@ app.include_router(audit_router)
 app.include_router(ui_router)
 
 app.mount("/static", StaticFiles(directory="app/static"), name="static")
+
+# Standalone single-page frontend (HTML + CSS + JS). Same origin as the API so
+# the httpOnly access_token cookie is automatically sent with requests.
+# Resolve the frontend directory relative to this file so it works regardless of CWD.
+_FRONTEND_DIR = Path(__file__).resolve().parent.parent.parent / "frontend"
+if _FRONTEND_DIR.is_dir():
+    app.mount("/app", StaticFiles(directory=str(_FRONTEND_DIR), html=True), name="frontend")
 
 
 @app.exception_handler(404)

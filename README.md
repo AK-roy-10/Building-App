@@ -55,6 +55,8 @@ uvicorn app.main:app --reload
 
 Open <http://localhost:8000>. Sign up at `/signup`. The default DB is SQLite at `./trading.db`.
 
+A standalone single-page **frontend** (plain HTML + CSS + JS, no build step) is also available at <http://localhost:8000/app/> — it talks to the JSON API and supports signup, login, dashboard, agent creation, broker connections and plan selection.
+
 ### Option B: Docker Compose (with Postgres)
 
 ```bash
@@ -156,6 +158,8 @@ backend/
     test_api_smoke.py
 docker-compose.yml
 .env.example
+frontend/
+  index.html             # standalone single-page frontend (served at /app/)
 ```
 
 ## License
