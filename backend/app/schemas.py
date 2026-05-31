@@ -44,11 +44,13 @@ class SubscribeRequest(BaseModel):
 
 
 class BrokerConnectionCreate(BaseModel):
-    broker: str  # 'paper' | 'alpaca'
+    broker: str  # 'paper' | 'alpaca' | 'ccxt' | ...
     label: str
     trade_scope: str = "paper"
     api_key: Optional[str] = None
     api_secret: Optional[str] = None
+    asset_classes: List[str] = []
+    extra: dict = {}  # broker-specific (e.g., {"exchange": "binance"} for ccxt)
 
 
 class BrokerConnectionOut(BaseModel):
@@ -59,6 +61,7 @@ class BrokerConnectionOut(BaseModel):
     enabled: bool
     cash_cents: int
     positions: dict
+    asset_classes: List[str] = []
 
     model_config = {"from_attributes": True}
 
@@ -69,10 +72,17 @@ class AgentCreate(BaseModel):
     config: dict
     automation: str = "suggest"
     model_code: str = "mock"
+    llm_provider: str = ""  # "" lets the registry pick by model_code
+    llm_params: dict = {}
+    asset_class: str = "equity"
+    timeframe: str = "1d"
+    data_provider: str = "synthetic"
     broker_connection_id: Optional[str] = None
     max_position_notional_cents: int = 5_000_00
     max_orders_per_run: int = 3
     allowed_symbols: List[str] = []
+
+    model_config = {"protected_namespaces": ()}  # silence pydantic's `model_` warning
 
 
 class AgentOut(BaseModel):
@@ -82,11 +92,25 @@ class AgentOut(BaseModel):
     config: dict
     automation: str
     model_code: str
+    llm_provider: str = ""
+    llm_params: dict = {}
+    asset_class: str = "equity"
+    timeframe: str = "1d"
+    data_provider: str = "synthetic"
     broker_connection_id: Optional[str]
     status: str
     max_position_notional_cents: int
     max_orders_per_run: int
     allowed_symbols: List[str]
+
+    model_config = {"protected_namespaces": ()}
+
+
+class BacktestRequest(BaseModel):
+    start: Optional[str] = None  # ISO date
+    end: Optional[str] = None
+    starting_cash_cents: int = 100_000_00
+    symbol: Optional[str] = None  # overrides allowed_symbols[0]
 
 
 class ProposalOut(BaseModel):

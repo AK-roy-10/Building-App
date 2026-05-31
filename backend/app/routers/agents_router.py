@@ -29,7 +29,13 @@ def _serialize(a: models.Agent) -> dict:
     return {
         "id": a.id, "name": a.name, "strategy_code": a.strategy_code,
         "config": a.config_json, "automation": a.automation.value,
-        "model_code": a.model_code, "broker_connection_id": a.broker_connection_id,
+        "model_code": a.model_code,
+        "llm_provider": getattr(a, "llm_provider", "") or "",
+        "llm_params": getattr(a, "llm_params_json", {}) or {},
+        "asset_class": getattr(a, "asset_class", "equity") or "equity",
+        "timeframe": getattr(a, "timeframe", "1d") or "1d",
+        "data_provider": getattr(a, "data_provider", "synthetic") or "synthetic",
+        "broker_connection_id": a.broker_connection_id,
         "status": a.status.value,
         "max_position_notional_cents": a.max_position_notional_cents,
         "max_orders_per_run": a.max_orders_per_run,
@@ -44,6 +50,10 @@ def create_agent(body: schemas.AgentCreate,
     require_in_list(db, user.org_id, "allowed_strategies", body.strategy_code)
     require_in_list(db, user.org_id, "allowed_models", body.model_code)
     require_in_list(db, user.org_id, "allowed_automation", body.automation)
+    require_in_list(db, user.org_id, "allowed_asset_classes", body.asset_class)
+    require_in_list(db, user.org_id, "allowed_data_providers", body.data_provider)
+    if body.llm_provider:
+        require_in_list(db, user.org_id, "allowed_llm_providers", body.llm_provider)
     current = db.query(models.Agent).filter_by(org_id=user.org_id).count()
     check_quota(db, user.org_id, "max_agents", current)
 
@@ -70,7 +80,13 @@ def create_agent(body: schemas.AgentCreate,
     agent = models.Agent(
         org_id=user.org_id, name=body.name, strategy_code=body.strategy_code,
         config_json=body.config, automation=models.AutomationLevel(body.automation),
-        model_code=body.model_code, broker_connection_id=body.broker_connection_id,
+        model_code=body.model_code,
+        llm_provider=body.llm_provider,
+        llm_params_json=body.llm_params,
+        asset_class=body.asset_class,
+        timeframe=body.timeframe,
+        data_provider=body.data_provider,
+        broker_connection_id=body.broker_connection_id,
         max_position_notional_cents=body.max_position_notional_cents,
         max_orders_per_run=body.max_orders_per_run,
         allowed_symbols_csv=",".join(s.upper() for s in body.allowed_symbols),

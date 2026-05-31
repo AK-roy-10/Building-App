@@ -5,15 +5,39 @@ For production, add retries, websockets for streaming, and proper reconciliation
 """
 from __future__ import annotations
 import httpx
-from .base import BrokerConnector, BrokerOrder, BrokerAccount, BrokerError
+from .base import (
+    BrokerConnector, BrokerOrder, BrokerAccount, BrokerError,
+    BrokerCapabilities, FeeModel,
+)
 
 
 class AlpacaBroker(BrokerConnector):
+    capabilities = BrokerCapabilities(
+        code="alpaca",
+        name="Alpaca (equity + crypto)",
+        asset_classes=["equity", "crypto"],
+        order_types=["market", "limit", "stop", "stop_limit", "trailing_stop"],
+        timeframes=["1m", "5m", "15m", "30m", "1h", "1d"],
+        supports_fractional=True,
+        supports_shorting=True,
+        supports_24_7=False,  # equity is RTH; crypto sub-account is 24/7
+        sandbox_url="https://paper-api.alpaca.markets",
+        notes="US equity and crypto. Live + paper endpoints.",
+    )
+
     def __init__(self, api_key: str, api_secret: str, base_url: str):
         if not (api_key and api_secret and base_url):
             raise BrokerError("Alpaca credentials not configured")
         self.base = base_url.rstrip("/")
         self.headers = {"APCA-API-KEY-ID": api_key, "APCA-API-SECRET-KEY": api_secret}
+
+    def verify(self) -> dict:
+        try:
+            acct = self._get("/v2/account")
+            return {"ok": True, "detail": f"Alpaca account {acct.get('id', '?')[:8]}…",
+                    "status": acct.get("status"), "buying_power": acct.get("buying_power")}
+        except BrokerError as e:
+            return {"ok": False, "detail": str(e)}
 
     def _get(self, path: str) -> dict:
         r = httpx.get(self.base + path, headers=self.headers, timeout=15.0)

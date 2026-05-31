@@ -9,7 +9,7 @@ from datetime import datetime
 from sqlalchemy.orm import Session
 
 from .. import models
-from .base import BrokerConnector, BrokerOrder, BrokerAccount, BrokerError
+from .base import BrokerConnector, BrokerOrder, BrokerAccount, BrokerError, BrokerCapabilities, FeeModel
 
 
 def _synthetic_price(symbol: str, now: datetime | None = None) -> float:
@@ -24,9 +24,28 @@ def _synthetic_price(symbol: str, now: datetime | None = None) -> float:
 
 
 class PaperBroker(BrokerConnector):
+    capabilities = BrokerCapabilities(
+        code="paper",
+        name="Built-in paper broker",
+        asset_classes=["equity", "crypto", "forex", "futures", "commodity_cfd"],
+        order_types=["market", "limit"],
+        timeframes=["1m", "5m", "15m", "1h", "1d"],
+        supports_fractional=True,
+        supports_shorting=False,
+        supports_24_7=True,
+        multi_currency=False,
+        fee_model=FeeModel(per_order_cents=0, bps_of_notional=0, min_fee_cents=0),
+        requires_credentials=False,
+        notes="Offline synthetic broker. Fills instantly at last price.",
+    )
+
     def __init__(self, db: Session, conn: models.BrokerConnection):
         self.db = db
         self.conn = conn
+
+    def verify(self) -> dict:
+        return {"ok": True, "detail": "paper broker — always available",
+                "cash_cents": self.conn.cash_cents}
 
     def get_account(self) -> BrokerAccount:
         return BrokerAccount(cash_cents=self.conn.cash_cents, positions=dict(self.conn.positions_json or {}))

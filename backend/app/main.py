@@ -13,6 +13,8 @@ from .routers.agents_router import router as agents_router
 from .routers.approvals_router import router as approvals_router
 from .routers.audit_router import router as audit_router
 from .routers.ui_router import router as ui_router
+from .routers.markets_router import router as markets_router
+from .routers.llms_router import router as llms_router
 
 app = FastAPI(
     title="AI Agentic Trading SaaS — MVP",
@@ -42,6 +44,8 @@ app.include_router(brokers_router)
 app.include_router(agents_router)
 app.include_router(approvals_router)
 app.include_router(audit_router)
+app.include_router(markets_router)
+app.include_router(llms_router)
 app.include_router(ui_router)
 
 app.mount("/static", StaticFiles(directory="app/static"), name="static")

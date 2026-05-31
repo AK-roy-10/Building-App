@@ -69,12 +69,15 @@ class BrokerConnection(Base):
     __tablename__ = "broker_connections"
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
     org_id: Mapped[str] = mapped_column(String(36), ForeignKey("organizations.id"), index=True, nullable=False)
-    broker: Mapped[str] = mapped_column(String(40), nullable=False)  # 'paper' | 'alpaca'
+    broker: Mapped[str] = mapped_column(String(40), nullable=False)  # 'paper' | 'alpaca' | ...
     label: Mapped[str] = mapped_column(String(80), nullable=False)
     encrypted_credentials: Mapped[str] = mapped_column(Text, default="")  # base64 Fernet
-    trade_scope: Mapped[str] = mapped_column(String(40), default="paper")  # 'paper' | 'live'
+    trade_scope: Mapped[str] = mapped_column(String(40), default="paper")  # 'sandbox' | 'paper' | 'live'
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     enabled: Mapped[bool] = mapped_column(Boolean, default=True)
+    # Per-connection asset-class allowlist (subset of the broker's capabilities).
+    # Empty list / null means "all that the broker supports".
+    asset_classes_json: Mapped[list] = mapped_column(JSON, default=list)
     # Paper broker state (for the built-in paper broker)
     cash_cents: Mapped[int] = mapped_column(Integer, default=100_000_00)  # $100k starter
     positions_json: Mapped[dict] = mapped_column(JSON, default=dict)  # {symbol: {qty, avg_price}}
@@ -103,7 +106,15 @@ class Agent(Base):
     strategy_code: Mapped[str] = mapped_column(String(40), nullable=False)
     config_json: Mapped[dict] = mapped_column(JSON, default=dict)
     automation: Mapped[AutomationLevel] = mapped_column(SAEnum(AutomationLevel), default=AutomationLevel.suggest)
-    model_code: Mapped[str] = mapped_column(String(40), default="mock")
+    model_code: Mapped[str] = mapped_column(String(80), default="mock")
+    # New: provider + extra params for the new LLM registry. `model_code` above
+    # remains the catalog id; `llm_provider` is the dispatcher hint.
+    llm_provider: Mapped[str] = mapped_column(String(40), default="")
+    llm_params_json: Mapped[dict] = mapped_column(JSON, default=dict)
+    # New: asset class + timeframe drive the data provider + risk checks.
+    asset_class: Mapped[str] = mapped_column(String(20), default="equity")
+    timeframe: Mapped[str] = mapped_column(String(8), default="1d")
+    data_provider: Mapped[str] = mapped_column(String(40), default="synthetic")
     broker_connection_id: Mapped[str | None] = mapped_column(String(36), ForeignKey("broker_connections.id"), nullable=True)
     status: Mapped[AgentStatus] = mapped_column(SAEnum(AgentStatus), default=AgentStatus.draft)
     # Per-agent risk policy
